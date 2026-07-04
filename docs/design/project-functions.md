@@ -16,6 +16,11 @@ Artifacts: `docs/reference/investigation-mandelbrot-potential-landscape-renderin
 - **F2.2 Optional sphere** — the decorative "moon" sphere is toggled by a
   checkbox; it rests on the terrain and re-seats itself when cliff steepness
   changes.
+- **F2.2a Sphere position & height** — a Sphere control group with Position X
+  (−2.7…1.5), Position Y (−2.1…2.1) and Altitude (−0.15…+0.85 above the
+  terrain resting point) sliders; altitude is terrain-relative, so the sphere
+  follows the landscape as it moves. Controls disable and dim while the sphere
+  is off.
 - **F2.3 User-controlled lighting** — sun azimuth (0–360°), elevation (3–85°)
   and intensity sliders update shading and cast shadows live; shadows can be
   toggled off for slower GPUs.

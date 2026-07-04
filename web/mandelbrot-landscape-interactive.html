@@ -65,6 +65,16 @@
     <label class="chk"><input type="checkbox" id="crtOn" checked> CRT scanlines</label>
   </section>
 
+  <section id="sphereSec">
+    <h2>Sphere</h2>
+    <div class="row"><label for="sphX">Position X</label>
+      <input type="range" id="sphX" min="-2.7" max="1.5" step="0.01" value="-1.75"><output id="sphXV">-1.75</output></div>
+    <div class="row"><label for="sphY">Position Y</label>
+      <input type="range" id="sphY" min="-2.1" max="2.1" step="0.01" value="0.08"><output id="sphYV">0.08</output></div>
+    <div class="row"><label for="sphAlt">Altitude</label>
+      <input type="range" id="sphAlt" min="-0.15" max="0.85" step="0.01" value="0"><output id="sphAltV">+0.00</output></div>
+  </section>
+
   <section>
     <h2>Light</h2>
     <div class="row"><label for="az">Azimuth</label>
@@ -100,11 +110,12 @@
 const X0=-2.7, X1=1.5, Y0=-2.1, Y1=2.1;   // complex-plane window
 const HSCALE=0.55;                        // terrain height, world units
 const MAXITER=400, BAIL2=1e20;            // escape iteration
-const SPH_X=-1.75, SPH_Y=0.08, SPH_R=0.22;
+const SPH_R=0.22;
 const FOV_TAN=Math.tan(28*Math.PI/180);   // vertical half-FOV
 
 const params={ sphere:true, shadows:true, crt:true,
-  az:45, el:21, sunI:1.05, beta:4.8, grid:1024 };
+  az:45, el:21, sunI:1.05, beta:4.8, grid:1024,
+  sphX:-1.75, sphY:0.08, sphAlt:0 };
 
 const DEFAULT_CAM={ yaw:-0.682, pitch:0.313, dist:3.577, tx:-0.90, ty:0.40, tz:0.30 };
 const cam={...DEFAULT_CAM};
@@ -323,7 +334,7 @@ function gAt(x,y){
   return (g(jj,i)*(1-fu)+g(jj,i+1)*fu)*(1-fv)+(g(jj+1,i)*(1-fu)+g(jj+1,i+1)*fu)*fv;
 }
 function hAtJS(x,y){ return HSCALE*Math.exp(-params.beta*gAt(x,y)); }
-function sphereZ(){ return hAtJS(SPH_X,SPH_Y)+SPH_R*0.75; }
+function sphereZ(){ return hAtJS(params.sphX,params.sphY)+SPH_R*0.75+params.sphAlt; }
 
 // ---------------- camera ----------------------------------------------------
 function camVectors(){
@@ -361,7 +372,7 @@ function draw(){
   gl.uniform3fv(U.uSunDir,sun);
   gl.uniform1f(U.uSunI,params.sunI);
   gl.uniform1f(U.uBeta,params.beta);
-  gl.uniform4f(U.uSphere,SPH_X,SPH_Y,sphereZ(),SPH_R);
+  gl.uniform4f(U.uSphere,params.sphX,params.sphY,sphereZ(),SPH_R);
   gl.uniform1i(U.uSphereOn,params.sphere?1:0);
   gl.uniform1i(U.uShadows,params.shadows?1:0);
   gl.uniform1i(U.uCrt,params.crt?1:0);
@@ -429,10 +440,22 @@ function bindCheck(id,key){
 }
 bindCheck('sphereOn','sphere'); bindCheck('shadowsOn','shadows'); bindCheck('crtOn','crt');
 
+// sphere position/height controls follow the sphere toggle
+const sphereInputs=['sphX','sphY','sphAlt'].map(id=>document.getElementById(id));
+function syncSphereUI(){
+  sphereInputs.forEach(el=>{ el.disabled=!params.sphere; });
+  document.getElementById('sphereSec').style.opacity=params.sphere?'':'0.45';
+}
+document.getElementById('sphereOn').addEventListener('change',syncSphereUI);
+syncSphereUI();
+
 function bindRange(id,key,fmt){
   const el=document.getElementById(id), out=document.getElementById(id+'V');
   el.addEventListener('input',()=>{ params[key]=parseFloat(el.value); out.textContent=fmt(el.value); dirty=true; });
 }
+bindRange('sphX','sphX',v=>parseFloat(v).toFixed(2));
+bindRange('sphY','sphY',v=>parseFloat(v).toFixed(2));
+bindRange('sphAlt','sphAlt',v=>(v>=0?'+':'')+parseFloat(v).toFixed(2));
 bindRange('az','az',v=>v+'°');
 bindRange('el','el',v=>v+'°');
 bindRange('sunI','sunI',v=>parseFloat(v).toFixed(2));

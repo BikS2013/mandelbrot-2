@@ -11,8 +11,9 @@
 2. **Environment quirk** — the shell aliases `python` to Homebrew Python 3.12,
    which overrides an activated uv venv; Python scripts must be run with
    `uv run python …`.
-3. **Viewer niceties (optional)** — the sphere position is fixed (no drag-to-move);
-   terrain does not receive the sphere's cast shadow; no screenshot/export button.
+3. **Viewer niceties (optional)** — no drag-to-move for the sphere (position is
+   slider-controlled since 2026-07-04); terrain does not receive the sphere's
+   cast shadow; no screenshot/export button.
 
 ## Completed
 

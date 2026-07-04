@@ -39,10 +39,12 @@ drag; wheel/pinch zoom; right-drag or shift-drag pan (clamped to the field
 window); camera-terrain collision guard (CPU-side bilinear height sampler);
 render-on-demand (dirty flag) so the GPU idles when nothing changes.
 
-**User controls:** moon-sphere toggle, cast-shadow toggle, CRT-scanline toggle,
-sun azimuth (0–360°), sun elevation (3–85°), sun intensity, cliff steepness β
-(2.5–8, live uniform — the field texture stores √φ so β needs no recompute),
-grid resolution (1024/2048, recomputes the field), reset view.
+**User controls:** moon-sphere toggle, sphere position X/Y and terrain-relative
+altitude (the sphere's rest height is re-sampled from the CPU-side field
+whenever position, altitude, or β changes), cast-shadow toggle, CRT-scanline
+toggle, sun azimuth (0–360°), sun elevation (3–85°), sun intensity, cliff
+steepness β (2.5–8, live uniform — the field texture stores √φ so β needs no
+recompute), grid resolution (1024/2048, recomputes the field), reset view.
 
 **Key parameter defaults (matched to the validated PoC):** β = 4.8,
 HSCALE = 0.55, camera orbit equivalent of position (1.75, −1.75, 1.40) looking
