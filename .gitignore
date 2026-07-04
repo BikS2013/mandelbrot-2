@@ -1,0 +1,33 @@
+# --- Node / app build ---------------------------------------------------
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# --- Python (test_scripts PoC, uv-managed) -------------------------------
+.venv/
+__pycache__/
+*.py[cod]
+
+# --- environment / secrets ------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# --- logs / temp -----------------------------------------------------------
+*.log
+npm-debug.log*
+*.tmp
+
+# --- OS noise ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# --- editors -----------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- not for redistribution (copyrighted book-plate scan, kept local) --------
+docs/reference/original-mandelbrot-potential-landscape.png
