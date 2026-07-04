@@ -25,6 +25,14 @@
 
 ## Completed
 
+- **Self-hosted TypeScript app** — resolved 2026-07-04: the explorer is now a
+  Vite 8 + TypeScript 6 project in `app/` (strict typecheck, Web-Worker field
+  computation, zero runtime deps, static `dist/` build). Dev-only dependencies
+  vite@8.1.3 and typescript@6.0.3 checked against the npm registry: current,
+  actively published, not deprecated, `npm audit` clean (0 vulnerabilities).
+  The claude.ai artifact remains as a convenience mirror of the single-file
+  prototype but is no longer required.
+
 - **Decide the final reproduction route** — resolved 2026-07-04: route C
   (real-time GLSL) implemented as `web/mandelbrot-landscape-interactive.html`
   with orbit/zoom/pan, optional sphere, and user-controlled lighting; verified

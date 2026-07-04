@@ -8,7 +8,8 @@ Artifacts: `docs/reference/investigation-mandelbrot-potential-landscape-renderin
 `test_scripts/poc_potential_landscape.py`, `docs/reference/poc-potential-landscape-render.png`.
 
 ## F2 — Interactive real-time viewer (done)
-`web/mandelbrot-landscape-interactive.html` (WebGL2, self-contained).
+Canonical: `app/` (self-hosted TypeScript app — see F3). Prototype:
+`web/mandelbrot-landscape-interactive.html` (WebGL2, self-contained single file).
 
 - **F2.1 Rotate / zoom / pan** — drag orbits the camera, wheel or pinch zooms,
   right-drag / shift-drag pans; camera cannot go below the terrain; Reset view
@@ -36,3 +37,19 @@ Artifacts: `docs/reference/investigation-mandelbrot-potential-landscape-renderin
   per window so the landscape look is preserved at any depth; verified to
   ×84,000 (mini-Mandelbrot resolved as its own lake). Max depth: width 10⁻¹²
   (double precision).
+
+## F3 — Self-hosted TypeScript app (done)
+`app/` — Vite 8 + TypeScript 6 (strict), all F2 features ported 1:1 from the
+verified prototype, plus:
+
+- **F3.1 Static self-hosting** — `npm run build` → fully static `dist/` with
+  relative paths; hostable on nginx / GitHub Pages / S3 / `npx serve`; no
+  backend and no runtime dependencies.
+- **F3.2 Worker-based field computation** — escape iteration + normalization
+  run in a Web Worker with progress messages and a transferable result buffer;
+  the UI never blocks during recomputes.
+- **F3.3 Typed module architecture** — state / field / renderer / camera /
+  minimap / UI split with strict typing (`npm run typecheck`); module map
+  documented in `app/README.md`.
+- Verified end-to-end on the production build: default render, set-dive,
+  orbit/zoom, sphere altitude, light azimuth — zero console errors.

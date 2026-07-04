@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandelbrot Landscape Explorer</title>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<aside id="panel" aria-label="Render controls">
+  <p class="eyebrow">Function rendering · CPM/M</p>
+  <h1>Mandelbrot landscape explorer</h1>
+  <p class="sub">after Peitgen &amp; Richter, 1985–86</p>
+
+  <section id="regionSec">
+    <h2>Region</h2>
+    <canvas id="minimap" width="192" height="192" title="Click to recenter"></canvas>
+    <div class="ro"><span>Center Re</span><span id="roRe">−0.60000</span></div>
+    <div class="ro"><span>Center Im</span><span id="roIm">0.00000</span></div>
+    <div class="ro"><span>Width</span><span id="roW">4.2000</span></div>
+    <div class="ro"><span>Zoom</span><span id="roZ">×1</span></div>
+    <div class="btnrow"><button id="zin" type="button">Zoom in ×2</button><button id="zout" type="button">Out ÷2</button></div>
+    <div class="btnrow"><button id="zback" type="button" disabled>Back</button><button id="zreset" type="button">Reset region</button></div>
+  </section>
+
+  <section>
+    <h2>Scene</h2>
+    <label class="chk"><input type="checkbox" id="sphereOn" checked> Moon sphere</label>
+    <label class="chk"><input type="checkbox" id="shadowsOn" checked> Cast shadows</label>
+    <label class="chk"><input type="checkbox" id="crtOn" checked> CRT scanlines</label>
+  </section>
+
+  <section id="sphereSec">
+    <h2>Sphere</h2>
+    <div class="row"><label for="sphX">Position X</label>
+      <input type="range" id="sphX" min="-2.1" max="2.1" step="0.01" value="-1.15"><output id="sphXV">-1.15</output></div>
+    <div class="row"><label for="sphY">Position Y</label>
+      <input type="range" id="sphY" min="-2.1" max="2.1" step="0.01" value="0.08"><output id="sphYV">0.08</output></div>
+    <div class="row"><label for="sphAlt">Altitude</label>
+      <input type="range" id="sphAlt" min="-0.15" max="0.85" step="0.01" value="0"><output id="sphAltV">+0.00</output></div>
+  </section>
+
+  <section>
+    <h2>Light</h2>
+    <div class="row"><label for="az">Azimuth</label>
+      <input type="range" id="az" min="0" max="360" step="1" value="45"><output id="azV">45°</output></div>
+    <div class="row"><label for="el">Elevation</label>
+      <input type="range" id="el" min="3" max="85" step="1" value="21"><output id="elV">21°</output></div>
+    <div class="row"><label for="sunI">Intensity</label>
+      <input type="range" id="sunI" min="0.4" max="1.6" step="0.05" value="1.05"><output id="sunIV">1.05</output></div>
+  </section>
+
+  <section>
+    <h2>Terrain</h2>
+    <div class="row"><label for="beta">Cliffs</label>
+      <input type="range" id="beta" min="2.5" max="8" step="0.1" value="4.8"><output id="betaV">4.8</output></div>
+    <div class="row"><label for="grid">Grid</label>
+      <select id="grid"><option value="512">512 × 512 (fast)</option><option value="1024" selected>1024 × 1024</option><option value="2048">2048 × 2048</option></select></div>
+  </section>
+
+  <button id="reset" type="button">Reset view</button>
+  <p class="hint">drag — orbit &nbsp;·&nbsp; wheel / pinch — zoom<br>right-drag or shift-drag — pan<br>double-click terrain — dive into the set ×2</p>
+</aside>
+
+<div id="overlay">
+  <div class="card"><b>Computing potential field…</b>
+    <progress id="prog" max="1" value="0"></progress>
+    <span class="pct" id="pct">0%</span>
+  </div>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

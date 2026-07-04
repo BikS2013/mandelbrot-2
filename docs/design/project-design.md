@@ -16,8 +16,16 @@ through pure function rendering, and provide an interactive real-time viewer.
   `docs/reference/poc-potential-landscape-render.png`.
 
 ### 2. Interactive explorer (route C — real-time GLSL)
-- `web/mandelbrot-landscape-interactive.html` — single self-contained WebGL2 page,
-  no external dependencies. Published as a Claude Artifact as well.
+- **`app/` — the canonical implementation**: self-hosted TypeScript app
+  (Vite 8 + TS 6, strict mode, dev-only dependencies, zero runtime
+  dependencies). `npm run build` emits a fully static `dist/` (relative asset
+  paths) deployable on any web server — no backend, no claude.ai artifact
+  required. Module map in `app/README.md`. The field computation runs in a
+  **Web Worker** (`src/field.worker.ts`), replacing the single-file version's
+  main-thread chunking.
+- `web/mandelbrot-landscape-interactive.html` — the original single-file
+  WebGL2 prototype (identical math/UX, no build step). Kept as a zero-tooling
+  fallback; also published as a Claude Artifact.
 
 **Coordinate model (explorer):** WORLD space is fixed — the terrain always spans
 `[−2.1, 2.1]²` world units and the camera flies in world space. The COMPLEX
