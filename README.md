@@ -6,6 +6,8 @@ landscape"** rendering of the Mandelbrot set — the style of the August-1985
 (Springer, 1986) — extended into an interactive explorer that lets you dive
 into the set itself.
 
+**▶ Live site: <https://biks2013.github.io/mandelbrot-2/>**
+
 ![The explorer, default view](docs/reference/screenshot-explorer-app.png)
 
 The terrain is not modeled geometry: it is the graph of a single mathematical
@@ -55,6 +57,21 @@ npm run preview    # sanity-check the production build locally
 `app/dist/` is plain static files with relative asset paths — deploy it to any
 web server (nginx, GitHub Pages, S3, `npx serve dist`). No backend, no CDN, no
 external requests.
+
+### GitHub Pages
+
+The site is published at <https://biks2013.github.io/mandelbrot-2/>, served
+from the `gh-pages` branch of this repository. To redeploy after changes:
+
+```bash
+cd app
+npm run build
+touch dist/.nojekyll
+cd dist
+git init -b gh-pages && git add -A && git commit -m "deploy"
+git push -f https://github.com/BikS2013/mandelbrot-2.git gh-pages:gh-pages
+rm -rf .git
+```
 
 ## Controls
 
