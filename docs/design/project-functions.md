@@ -54,6 +54,15 @@ verified prototype, plus:
 - **F3.4 Collapsible control panel** — a −/+ toggle in the panel header
   collapses the whole control stack to a slim title bar (aria-expanded kept in
   sync), giving an unobstructed view of the landscape.
+- **F3.5 Mobile support** — touch devices are detected by capability
+  (`pointer: coarse`, `maxTouchPoints`, UA fallback; stamped as a `.touch`
+  root class) and small screens by media query. On small screens the panel
+  becomes a bottom sheet that starts collapsed. Touch gestures: one-finger
+  orbit, pinch zoom, **two-finger drag pan**, **double-tap to dive** (with
+  tap-movement rejection and dblclick dedupe). Touch targets enlarge, hints
+  use touch wording, and the render resolution caps at 1× DPR on touch
+  devices for GPU headroom. Verified on iPhone-14 emulation (local and on the
+  published site) plus a desktop regression pass.
 - Verified end-to-end on the production build: default render, set-dive,
   orbit/zoom, sphere altitude, light azimuth — zero console errors.
 - Published on GitHub Pages (`gh-pages` branch): https://biks2013.github.io/mandelbrot-2/
