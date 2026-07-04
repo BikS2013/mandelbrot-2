@@ -28,3 +28,11 @@ Artifacts: `docs/reference/investigation-mandelbrot-potential-landscape-renderin
   resolution select (1024²/2048², recomputes with progress overlay).
 - **F2.5 Period look** — optional CRT-scanline post effect, sunset-gradient sky
   and horizon fog matching the 1985/86 originals.
+- **F2.6 Set-space zoom (explorer)** — zooming into the Mandelbrot set itself,
+  independent of camera zoom: Region panel with clickable minimap, center/width/
+  zoom readouts, Zoom ×2 / ÷2 buttons, dive-history Back, Reset region, and
+  double-click-on-terrain to dive ×2 at that point. Iteration count adapts to
+  depth (up to 2500), the potential is computed in log space and re-normalized
+  per window so the landscape look is preserved at any depth; verified to
+  ×84,000 (mini-Mandelbrot resolved as its own lake). Max depth: width 10⁻¹²
+  (double precision).

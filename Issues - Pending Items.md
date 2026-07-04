@@ -14,6 +14,14 @@
 3. **Viewer niceties (optional)** — no drag-to-move for the sphere (position is
    slider-controlled since 2026-07-04); terrain does not receive the sphere's
    cast shadow; no screenshot/export button.
+4. **Explorer depth limit** — set-zoom is capped at window width 10⁻¹²
+   (IEEE-double per-pixel resolution). Going deeper would require perturbation
+   arithmetic (reference orbit + delta iteration), which is out of scope for
+   the single-file viewer today.
+5. **Deep-zoom compute time** — at max depth with the 2048² grid a field
+   recompute can take ~1 min (JS, single thread). Mitigations available if it
+   bothers: Web-Worker pool or WebGPU compute; the 512² "fast" grid option is
+   the current workaround.
 
 ## Completed
 

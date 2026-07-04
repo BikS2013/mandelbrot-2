@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mandelbrot Potential Landscape — Interactive</title>
+<title>Mandelbrot Landscape Explorer</title>
 <style>
   :root{
     --bg:#0B0A0E; --panel:rgba(18,16,24,.85); --text:#E9E4D9; --muted:#9A91A8;
@@ -40,6 +40,17 @@
   input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
   .hint{color:var(--muted);font-size:10.5px;margin:10px 0 0;line-height:1.6}
 
+  #minimap{display:block;width:100%;aspect-ratio:1;margin:0 0 8px;border:1px solid var(--line);
+    border-radius:6px;cursor:crosshair;image-rendering:pixelated}
+  .ro{display:flex;justify-content:space-between;margin:0 0 3px;font:11.5px var(--mono);
+    font-variant-numeric:tabular-nums;color:var(--muted)}
+  .ro span:first-child{color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .btnrow{display:flex;gap:6px;margin:7px 0 0}
+  .btnrow button{flex:1;padding:5px 0;background:transparent;color:var(--text);
+    border:1px solid var(--line);border-radius:6px;cursor:pointer;font:inherit}
+  .btnrow button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .btnrow button:disabled{opacity:.4;cursor:default}
+
   #overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     background:rgba(8,7,11,.88);z-index:10}
   #overlay .card{text-align:center;color:var(--text)}
@@ -55,8 +66,19 @@
 
 <aside id="panel" aria-label="Render controls">
   <p class="eyebrow">Function rendering · CPM/M</p>
-  <h1>Mandelbrot potential landscape</h1>
+  <h1>Mandelbrot landscape explorer</h1>
   <p class="sub">after Peitgen &amp; Richter, 1985–86</p>
+
+  <section id="regionSec">
+    <h2>Region</h2>
+    <canvas id="minimap" width="192" height="192" title="Click to recenter"></canvas>
+    <div class="ro"><span>Center Re</span><span id="roRe">−0.60000</span></div>
+    <div class="ro"><span>Center Im</span><span id="roIm">0.00000</span></div>
+    <div class="ro"><span>Width</span><span id="roW">4.2000</span></div>
+    <div class="ro"><span>Zoom</span><span id="roZ">×1</span></div>
+    <div class="btnrow"><button id="zin" type="button">Zoom in ×2</button><button id="zout" type="button">Out ÷2</button></div>
+    <div class="btnrow"><button id="zback" type="button" disabled>Back</button><button id="zreset" type="button">Reset region</button></div>
+  </section>
 
   <section>
     <h2>Scene</h2>
@@ -68,7 +90,7 @@
   <section id="sphereSec">
     <h2>Sphere</h2>
     <div class="row"><label for="sphX">Position X</label>
-      <input type="range" id="sphX" min="-2.7" max="1.5" step="0.01" value="-1.75"><output id="sphXV">-1.75</output></div>
+      <input type="range" id="sphX" min="-2.1" max="2.1" step="0.01" value="-1.15"><output id="sphXV">-1.15</output></div>
     <div class="row"><label for="sphY">Position Y</label>
       <input type="range" id="sphY" min="-2.1" max="2.1" step="0.01" value="0.08"><output id="sphYV">0.08</output></div>
     <div class="row"><label for="sphAlt">Altitude</label>
@@ -90,11 +112,11 @@
     <div class="row"><label for="beta">Cliffs</label>
       <input type="range" id="beta" min="2.5" max="8" step="0.1" value="4.8"><output id="betaV">4.8</output></div>
     <div class="row"><label for="grid">Grid</label>
-      <select id="grid"><option value="1024" selected>1024 × 1024</option><option value="2048">2048 × 2048</option></select></div>
+      <select id="grid"><option value="512">512 × 512 (fast)</option><option value="1024" selected>1024 × 1024</option><option value="2048">2048 × 2048</option></select></div>
   </section>
 
   <button id="reset" type="button">Reset view</button>
-  <p class="hint">drag — orbit &nbsp;·&nbsp; wheel / pinch — zoom<br>right-drag or shift-drag — pan</p>
+  <p class="hint">drag — orbit &nbsp;·&nbsp; wheel / pinch — zoom<br>right-drag or shift-drag — pan<br>double-click terrain — dive into the set ×2</p>
 </aside>
 
 <div id="overlay">
@@ -107,17 +129,24 @@
 <script>
 "use strict";
 // ---------------- constants (match the validated PoC) ----------------------
-const X0=-2.7, X1=1.5, Y0=-2.1, Y1=2.1;   // complex-plane window
+// WORLD space is fixed: the terrain always spans [-2.1,2.1]^2 world units and
+// the camera flies in world space. The COMPLEX window (win) mapped onto it is
+// what the explorer zooms — the field is recomputed per window.
+const X0=-2.1, X1=2.1, Y0=-2.1, Y1=2.1;   // fixed world extent of the terrain
 const HSCALE=0.55;                        // terrain height, world units
-const MAXITER=400, BAIL2=1e20;            // escape iteration
+const BAIL2=1e20;                         // escape bailout, |z|^2
 const SPH_R=0.22;
 const FOV_TAN=Math.tan(28*Math.PI/180);   // vertical half-FOV
+const MIN_W=1e-12, MAX_W=4.2;             // double-precision dive limit
+
+const win={cx:-0.6, cy:0.0, w:4.2};       // complex-plane window (square)
+const winStack=[];                        // dive history for Back
 
 const params={ sphere:true, shadows:true, crt:true,
   az:45, el:21, sunI:1.05, beta:4.8, grid:1024,
-  sphX:-1.75, sphY:0.08, sphAlt:0 };
+  sphX:-1.15, sphY:0.08, sphAlt:0 };
 
-const DEFAULT_CAM={ yaw:-0.682, pitch:0.313, dist:3.577, tx:-0.90, ty:0.40, tz:0.30 };
+const DEFAULT_CAM={ yaw:-0.682, pitch:0.313, dist:3.577, tx:-0.30, ty:0.40, tz:0.30 };
 const cam={...DEFAULT_CAM};
 
 // ---------------- WebGL setup ----------------------------------------------
@@ -277,49 +306,70 @@ const U={}; ['uField','uRes','uCamPos','uFwd','uRight','uUp','uTanHalf','uSunDir
   'uBeta','uSphere','uSphereOn','uShadows','uCrt'].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
 
 // ---------------- potential field (chunked, keeps UI alive) ----------------
-let fieldData=null, fieldN=0, fieldTex=null;
+let fieldData=null, fieldN=0, fieldTex=null, computing=false;
+
+function maxiterFor(w){
+  return Math.max(400, Math.min(2500, Math.round(400+300*Math.log10(4.2/w))));
+}
 
 function computeField(N, done){
+  computing=true;
+  const maxiter=maxiterFor(win.w);
   overlay.classList.remove('hidden');
-  overlay.querySelector('b').textContent='Computing potential field… '+N+' × '+N;
+  overlay.querySelector('b').textContent=
+    'Computing potential field… '+N+' × '+N+' · '+maxiter+' iterations';
   const data=new Float32Array(N*N*2);
-  let j=0;
+  let j=0, rows=8;
   const progEl=document.getElementById('prog'), pctEl=document.getElementById('pct');
+  const xmin=win.cx-win.w/2, ymin=win.cy-win.w/2, step=win.w/(N-1);
   function chunk(){
-    const jEnd=Math.min(N, j+16);
+    const t0=performance.now();
+    const jEnd=Math.min(N, j+rows);
     for(; j<jEnd; j++){
-      const ci=Y0+(Y1-Y0)*j/(N-1);
+      const ci=ymin+step*j;
       for(let i=0;i<N;i++){
-        const cr=X0+(X1-X0)*i/(N-1);
+        const cr=xmin+step*i;
         let zr=0, zi=0, n=0, r2=0;
-        while(n<MAXITER){
+        while(n<maxiter){
           const t=zr*zr-zi*zi+cr; zi=2*zr*zi+ci; zr=t; n++;
           r2=zr*zr+zi*zi;
           if(r2>BAIL2) break;
         }
         const k=(j*N+i)*2;
-        if(r2>BAIL2){
-          const phi=0.5*Math.log(r2)/Math.pow(2,n);
-          data[k]=Math.sqrt(Math.max(phi,0)); data[k+1]=0;
-        } else { data[k]=0; data[k+1]=1; }
+        // store L = log2(phi) — raw phi underflows doubles at deep zoom
+        if(r2>BAIL2){ data[k]=Math.log2(0.5*Math.log(r2))-n; data[k+1]=0; }
+        else { data[k]=0; data[k+1]=1; }
       }
     }
+    const el=performance.now()-t0;                      // adaptive chunk size
+    rows=Math.max(2, Math.min(64, Math.round(rows*36/Math.max(el,4))));
     progEl.value=j/N; pctEl.textContent=Math.round(100*j/N)+'%';
-    if(j<N) setTimeout(chunk,0);
-    else{
-      fieldData=data; fieldN=N;
-      if(!fieldTex) fieldTex=gl.createTexture();
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D,fieldTex);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RG32F,N,N,0,gl.RG,gl.FLOAT,data);
-      overlay.classList.add('hidden');
-      done();
-    }
+    if(j<N) setTimeout(chunk,0); else finish();
+  }
+  function finish(){
+    // per-window normalization in L-space: gn = 2^((L-Lref)/2) = sqrt(phi)/ref.
+    // Rescaling sqrt(phi) is equivalent to auto-tuning beta, so the landscape
+    // keeps its mesa-and-cliffs shape at every zoom depth.
+    const sample=[];
+    for(let k=0;k<N*N;k+=8) if(data[k*2+1]<0.5) sample.push(data[k*2]);
+    sample.sort((a,b)=>a-b);
+    const Lref=sample.length?
+      sample[Math.min(sample.length-1, Math.floor(sample.length*0.98))] : 0;
+    for(let k=0;k<N*N;k++)
+      if(data[k*2+1]<0.5) data[k*2]=Math.min(Math.pow(2,(data[k*2]-Lref)/2), 8);
+    fieldData=data; fieldN=N;
+    if(!fieldTex) fieldTex=gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D,fieldTex);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RG32F,N,N,0,gl.RG,gl.FLOAT,data);
+    overlay.classList.add('hidden');
+    computing=false;
+    done();
   }
   setTimeout(chunk,0);
 }
@@ -463,14 +513,132 @@ bindRange('beta','beta',v=>parseFloat(v).toFixed(1));
 
 document.getElementById('grid').addEventListener('change',e=>{
   params.grid=parseInt(e.target.value,10);
-  computeField(params.grid,()=>{ dirty=true; });
+  if(!computing) recompute();
 });
 document.getElementById('reset').addEventListener('click',()=>{
   Object.assign(cam,DEFAULT_CAM); dirty=true;
 });
 
+// ---------------- region: zooming the SET, not just the camera --------------
+const mini=document.getElementById('minimap');
+const roRe=document.getElementById('roRe'), roIm=document.getElementById('roIm');
+const roW=document.getElementById('roW'),  roZ=document.getElementById('roZ');
+const btnIn=document.getElementById('zin'),   btnOut=document.getElementById('zout');
+const btnBack=document.getElementById('zback'), btnRegionReset=document.getElementById('zreset');
+
+function worldToComplex(wx,wy){ return [win.cx+wx*(win.w/4.2), win.cy+wy*(win.w/4.2)]; }
+
+function fmtCoord(v){
+  const d=Math.max(5, Math.min(15, Math.ceil(-Math.log10(win.w))+4));
+  return v.toFixed(d);
+}
+function refreshRegionUI(){
+  roRe.textContent=fmtCoord(win.cx);
+  roIm.textContent=fmtCoord(win.cy);
+  roW.textContent=win.w>=0.01? win.w.toFixed(4) : win.w.toExponential(2);
+  const z=4.2/win.w;
+  roZ.textContent='×'+(z<1000? String(Math.round(z*10)/10) : z.toExponential(1));
+  btnBack.disabled=winStack.length===0;
+  btnOut.disabled=win.w>=MAX_W;
+  btnIn.disabled=win.w<=MIN_W;
+}
+
+function ramp(gn){   // minimap colormap: sunset palette, bright near the set
+  const st=[[0,238,236,242],[0.35,255,140,40],[0.8,120,25,8],[1.4,15,6,8]];
+  if(gn<=0) return [st[0][1],st[0][2],st[0][3]];
+  for(let s=1;s<st.length;s++){
+    if(gn<=st[s][0]){
+      const f=(gn-st[s-1][0])/(st[s][0]-st[s-1][0]);
+      return [st[s-1][1]+(st[s][1]-st[s-1][1])*f,
+              st[s-1][2]+(st[s][2]-st[s-1][2])*f,
+              st[s-1][3]+(st[s][3]-st[s-1][3])*f];
+    }
+  }
+  return [15,6,8];
+}
+function buildMinimap(){
+  const mm=mini.width, N=fieldN, ctx=mini.getContext('2d');
+  const img=ctx.createImageData(mm,mm);
+  for(let m=0;m<mm;m++){
+    const j=Math.round((1-(m+0.5)/mm)*(N-1));           // Im axis points up
+    for(let i2=0;i2<mm;i2++){
+      const i=Math.round((i2+0.5)/mm*(N-1));
+      const k=(j*N+i)*2, o=(m*mm+i2)*4;
+      const c=fieldData[k+1]>0.5? [5,5,8] : ramp(fieldData[k]);
+      img.data[o]=c[0]; img.data[o+1]=c[1]; img.data[o+2]=c[2]; img.data[o+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+
+function recompute(){
+  refreshRegionUI();
+  computeField(params.grid, ()=>{ buildMinimap(); refreshRegionUI(); dirty=true; });
+}
+function setWindow(cx,cy,w){
+  if(computing) return;
+  winStack.push({...win});
+  win.cx=cx; win.cy=cy; win.w=clamp(w,MIN_W,MAX_W);
+  recompute();
+}
+btnIn.addEventListener('click',()=>setWindow(win.cx,win.cy,win.w/2));
+btnOut.addEventListener('click',()=>setWindow(win.cx,win.cy,win.w*2));
+btnBack.addEventListener('click',()=>{
+  if(computing) return;
+  const p=winStack.pop();
+  if(p){ Object.assign(win,p); recompute(); }
+});
+btnRegionReset.addEventListener('click',()=>{
+  if(computing) return;
+  winStack.length=0;
+  Object.assign(win,{cx:-0.6,cy:0,w:4.2});
+  recompute();
+});
+mini.addEventListener('click',e=>{
+  if(computing||!fieldData) return;
+  const r=mini.getBoundingClientRect();
+  const fx=(e.clientX-r.left)/r.width, fy=(e.clientY-r.top)/r.height;
+  setWindow(win.cx+(fx-0.5)*win.w, win.cy+(0.5-fy)*win.w, win.w);
+});
+
+// double-click a terrain point to dive into the set there (CPU raycast
+// mirroring the shader's march)
+function raycastTerrain(clientX,clientY){
+  const r=canvas.getBoundingClientRect();
+  const sx=((clientX-r.left)/r.width*2-1)*(r.width/r.height);
+  const sy=-(((clientY-r.top)/r.height)*2-1);
+  const v=camVectors();
+  const d=[v.fwd[0]+FOV_TAN*(sx*v.right[0]+sy*v.up[0]),
+           v.fwd[1]+FOV_TAN*(sx*v.right[1]+sy*v.up[1]),
+           v.fwd[2]+FOV_TAN*(sx*v.right[2]+sy*v.up[2])];
+  const dl=Math.hypot(d[0],d[1],d[2]); d[0]/=dl; d[1]/=dl; d[2]/=dl;
+  let t=0.02, tPrev=0.02, hitT=-1;
+  for(let i=0;i<900;i++){
+    const px=v.pos[0]+d[0]*t, py=v.pos[1]+d[1]*t, pz=v.pos[2]+d[2]*t;
+    if(pz<hAtJS(px,py)){ hitT=t; break; }
+    if(t>12) break;
+    tPrev=t; t+=0.004*(1+t);
+  }
+  if(hitT<0) return null;
+  let lo=tPrev, hi=hitT;
+  for(let i=0;i<10;i++){
+    const m=0.5*(lo+hi);
+    if(v.pos[2]+d[2]*m < hAtJS(v.pos[0]+d[0]*m, v.pos[1]+d[1]*m)) hi=m; else lo=m;
+  }
+  const tf=0.5*(lo+hi);
+  return [v.pos[0]+d[0]*tf, v.pos[1]+d[1]*tf];
+}
+canvas.addEventListener('dblclick',e=>{
+  if(computing||!fieldData) return;
+  const hit=raycastTerrain(e.clientX,e.clientY);
+  if(!hit) return;
+  const c=worldToComplex(hit[0],hit[1]);
+  cam.tx=0; cam.ty=0;                 // the dived point becomes the new center
+  setWindow(c[0], c[1], win.w/2);
+});
+
 // ---------------- go ---------------------------------------------------------
-computeField(params.grid,()=>{ dirty=true; });
+recompute();
 </script>
 </body>
 </html>

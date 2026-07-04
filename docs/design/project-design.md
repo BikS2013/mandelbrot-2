@@ -15,17 +15,27 @@ through pure function rendering, and provide an interactive real-time viewer.
   (Python/numpy, uv-managed) that validated the recipe; output in
   `docs/reference/poc-potential-landscape-render.png`.
 
-### 2. Interactive viewer (route C — real-time GLSL)
+### 2. Interactive explorer (route C — real-time GLSL)
 - `web/mandelbrot-landscape-interactive.html` — single self-contained WebGL2 page,
   no external dependencies. Published as a Claude Artifact as well.
 
+**Coordinate model (explorer):** WORLD space is fixed — the terrain always spans
+`[−2.1, 2.1]²` world units and the camera flies in world space. The COMPLEX
+window (`win = {cx, cy, w}`, square, default center −0.6+0i, width 4.2) mapped
+onto that extent is what the explorer zooms; the field is recomputed per window.
+Camera zoom (dolly) and set zoom (window dive) are therefore independent.
+
 **Architecture (two-stage function rendering):**
 
-1. **Field stage (JavaScript, chunked to keep the UI responsive)** — computes
-   `g = √φ(c)` (φ = Douady–Hubbard potential, escape iteration, maxiter 400,
-   bailout 10¹⁰) plus an interior mask over the window
-   `Re ∈ [−2.7, 1.5], Im ∈ [−2.1, 2.1]` on a 1024² or 2048² grid, uploaded as an
-   RG32F texture (R = √φ, G = interior).
+1. **Field stage (JavaScript, chunked with adaptive chunk sizing)** — escape
+   iteration over the current complex window on a 512²/1024²/2048² grid.
+   Iteration budget scales with depth: `maxiter = clamp(400 + 300·log10(4.2/w),
+   400, 2500)`. The potential is stored in log space, `L = log2 φ =
+   log2(ln|z|) − n`, because raw φ underflows IEEE doubles beyond ~10³⁰⁰ (deep
+   zoom). Per window it is normalized `gn = 2^((L − Lref)/2)` with Lref = the
+   98th percentile of exterior L — mathematically a rescale of √φ, i.e. an
+   automatic β retune, so the landscape keeps the mesa-and-cliffs shape at
+   every depth. Uploaded as an RG32F texture (R = normalized √φ, G = interior).
 2. **Render stage (GLSL fragment shader, full-screen triangle)** — per-pixel ray
    march of the height field `h = HSCALE · exp(−β·√φ)` (manual bilinear texture
    sampling, growing step + 10-step bisection refinement), finite-difference
@@ -35,9 +45,19 @@ through pure function rendering, and provide an interactive real-time viewer.
    terrain melts into the sky. Post: gamma 1/1.6 + optional CRT scanlines.
 
 **Interaction model:** orbit camera (yaw/pitch/distance around a target) with
-drag; wheel/pinch zoom; right-drag or shift-drag pan (clamped to the field
-window); camera-terrain collision guard (CPU-side bilinear height sampler);
+drag; wheel/pinch zoom; right-drag or shift-drag pan (clamped to the world
+extent); camera-terrain collision guard (CPU-side bilinear height sampler);
 render-on-demand (dirty flag) so the GPU idles when nothing changes.
+
+**Set-zoom (Region) system:** a Region panel with a 192² minimap (top-down
+render of the field through a sunset colormap, rebuilt after every field
+compute; click recenters the window), Re/Im/width/zoom readouts with
+depth-adaptive precision, Zoom ×2 / ÷2 buttons, a dive-history Back stack, and
+Reset region. Double-clicking a terrain point dives ×2 into the set at that
+point: a CPU raycast mirroring the shader's march recovers the world hit,
+converts it to complex coordinates, recenters the window there and re-targets
+the camera to the world origin. Dive depth is capped at window width 10⁻¹²
+(double-precision limit — beyond this perturbation arithmetic would be needed).
 
 **User controls:** moon-sphere toggle, sphere position X/Y and terrain-relative
 altitude (the sphere's rest height is re-sampled from the CPU-side field
