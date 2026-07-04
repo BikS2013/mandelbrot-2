@@ -13,7 +13,7 @@ html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;
   border:1px solid var(--line);border-radius:8px;padding:0 16px 12px;user-select:none}
 /* header stays visible while the panel scrolls — it carries the show/hide toggle */
 #panelHead{display:flex;align-items:flex-start;gap:8px;position:sticky;top:0;z-index:2;
-  margin:0 -16px 4px;padding:14px 16px 6px;background:rgba(18,16,24,.96);
+  margin:0 -16px 4px;padding:14px 16px 6px;background:rgb(20,17,26);
   border-radius:8px 8px 0 0}
 #panelHead>div{flex:1;min-width:0}
 #panelToggle{flex:0 0 auto;width:24px;height:24px;padding:0;background:transparent;
