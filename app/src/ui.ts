@@ -151,6 +151,16 @@ export function setupUI(hooks: UiHooks): { setWindow(cx: number, cy: number, w: 
     hooks.markDirty();
   });
 
+  // collapsible panel
+  const panel = el<HTMLElement>('panel');
+  const panelToggle = el<HTMLButtonElement>('panelToggle');
+  panelToggle.addEventListener('click', () => {
+    const collapsed = panel.classList.toggle('collapsed');
+    panelToggle.textContent = collapsed ? '+' : '−';
+    panelToggle.title = collapsed ? 'Expand panel' : 'Collapse panel';
+    panelToggle.setAttribute('aria-expanded', String(!collapsed));
+  });
+
   refreshRegionUI();
   return { setWindow };
 }

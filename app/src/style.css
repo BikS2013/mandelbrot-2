@@ -11,6 +11,15 @@ html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;
 #panel{position:fixed;top:14px;right:14px;width:248px;max-height:calc(100% - 28px);
   overflow-y:auto;background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   border:1px solid var(--line);border-radius:8px;padding:14px 16px 12px;user-select:none}
+#panelHead{display:flex;align-items:flex-start;gap:8px}
+#panelHead>div{flex:1;min-width:0}
+#panelToggle{flex:0 0 auto;width:24px;height:24px;padding:0;background:transparent;
+  color:var(--muted);border:1px solid var(--line);border-radius:6px;cursor:pointer;
+  font:16px/1 var(--mono)}
+#panelToggle:hover{border-color:var(--accent);color:var(--accent)}
+#panel.collapsed #panelBody{display:none}
+#panel.collapsed .sub{display:none}
+#panel.collapsed #panelHead h1{margin-bottom:0}
 #panel .eyebrow{font:600 9.5px/1 var(--mono);letter-spacing:.18em;color:var(--accent);
   text-transform:uppercase;margin:0 0 6px}
 #panel h1{font-size:15px;font-weight:650;line-height:1.25;margin:0 0 2px;text-wrap:balance}

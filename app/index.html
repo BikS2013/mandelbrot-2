@@ -9,10 +9,17 @@
 <canvas id="gl"></canvas>
 
 <aside id="panel" aria-label="Render controls">
-  <p class="eyebrow">Function rendering · CPM/M</p>
-  <h1>Mandelbrot landscape explorer</h1>
-  <p class="sub">after Peitgen &amp; Richter, 1985–86</p>
+  <header id="panelHead">
+    <div>
+      <p class="eyebrow">Function rendering · CPM/M</p>
+      <h1>Mandelbrot landscape explorer</h1>
+      <p class="sub">after Peitgen &amp; Richter, 1985–86</p>
+    </div>
+    <button id="panelToggle" type="button" aria-expanded="true" aria-controls="panelBody"
+      title="Collapse panel">−</button>
+  </header>
 
+  <div id="panelBody">
   <section id="regionSec">
     <h2>Region</h2>
     <canvas id="minimap" width="192" height="192" title="Click to recenter"></canvas>
@@ -61,6 +68,7 @@
 
   <button id="reset" type="button">Reset view</button>
   <p class="hint">drag — orbit &nbsp;·&nbsp; wheel / pinch — zoom<br>right-drag or shift-drag — pan<br>double-click terrain — dive into the set ×2</p>
+  </div>
 </aside>
 
 <div id="overlay">
