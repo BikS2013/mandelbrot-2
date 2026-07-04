@@ -51,5 +51,9 @@ verified prototype, plus:
 - **F3.3 Typed module architecture** — state / field / renderer / camera /
   minimap / UI split with strict typing (`npm run typecheck`); module map
   documented in `app/README.md`.
+- **F3.4 Collapsible control panel** — a −/+ toggle in the panel header
+  collapses the whole control stack to a slim title bar (aria-expanded kept in
+  sync), giving an unobstructed view of the landscape.
 - Verified end-to-end on the production build: default render, set-dive,
   orbit/zoom, sphere altitude, light azimuth — zero console errors.
+- Published on GitHub Pages (`gh-pages` branch): https://biks2013.github.io/mandelbrot-2/
