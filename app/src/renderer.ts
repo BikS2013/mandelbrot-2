@@ -1,6 +1,10 @@
 import { FOV_TAN, SPH_R } from './constants';
+import { isTouchDevice } from './device';
 import { FS, VS } from './shaders';
 import type { CamBasis, Vec3 } from './types';
+
+// mobile GPUs pay dearly for the per-pixel march — cap the internal resolution
+const DPR_CAP = isTouchDevice ? 1 : 1.5;
 
 export interface DrawInput {
   basis: CamBasis;
@@ -71,7 +75,7 @@ export class Renderer {
 
   draw(input: DrawInput): void {
     const gl = this.gl;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
     const w = Math.round(this.canvas.clientWidth * dpr);
     const h = Math.round(this.canvas.clientHeight * dpr);
     if (this.canvas.width !== w || this.canvas.height !== h) {

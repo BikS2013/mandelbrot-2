@@ -1,4 +1,5 @@
 import { DEFAULT_CAM, DEFAULT_WIN, MAX_W, MIN_W, clamp } from './constants';
+import { isSmallScreen, isTouchDevice } from './device';
 import type { FieldStore } from './fieldStore';
 import { cam, params, win, winStack } from './state';
 
@@ -151,15 +152,24 @@ export function setupUI(hooks: UiHooks): { setWindow(cx: number, cy: number, w: 
     hooks.markDirty();
   });
 
-  // collapsible panel
+  // collapsible panel — starts collapsed on small screens so the landscape
+  // is visible first
   const panel = el<HTMLElement>('panel');
   const panelToggle = el<HTMLButtonElement>('panelToggle');
-  panelToggle.addEventListener('click', () => {
-    const collapsed = panel.classList.toggle('collapsed');
+  function setCollapsed(collapsed: boolean): void {
+    panel.classList.toggle('collapsed', collapsed);
     panelToggle.textContent = collapsed ? '+' : '−';
     panelToggle.title = collapsed ? 'Expand panel' : 'Collapse panel';
     panelToggle.setAttribute('aria-expanded', String(!collapsed));
-  });
+  }
+  panelToggle.addEventListener('click', () => setCollapsed(!panel.classList.contains('collapsed')));
+  if (isSmallScreen) setCollapsed(true);
+
+  // touch devices get touch wording in the hints
+  if (isTouchDevice) {
+    el<HTMLParagraphElement>('hint').innerHTML =
+      'one finger — orbit &nbsp;·&nbsp; pinch — zoom<br>two-finger drag — pan<br>double-tap terrain — dive into the set ×2';
+  }
 
   refreshRegionUI();
   return { setWindow };

@@ -1,6 +1,7 @@
 import './style.css';
 import { attachCameraControls, camVectors, raycastTerrain } from './camera';
 import { maxiterFor } from './constants';
+import { isTouchDevice } from './device';
 import { FieldStore } from './fieldStore';
 import { buildMinimap } from './minimap';
 import { Renderer, type DrawInput } from './renderer';
@@ -9,6 +10,8 @@ import {
   hideOverlay, refreshRegionUI, setProgress, setupUI, showFatal, showOverlay,
 } from './ui';
 import type { Vec3 } from './types';
+
+if (isTouchDevice) document.documentElement.classList.add('touch');
 
 const canvas = document.getElementById('gl') as HTMLCanvasElement;
 const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement;

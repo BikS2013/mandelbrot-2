@@ -61,3 +61,17 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 #overlay .pct{font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 #overlay.hidden{display:none}
 @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+
+/* touch devices (JS stamps .touch on <html>): larger hit targets */
+:root.touch .row input[type=range]{height:30px}
+:root.touch .btnrow button,:root.touch #reset{padding:10px 0}
+:root.touch .chk{padding:3px 0}
+:root.touch .row select{padding:7px 6px}
+:root.touch #panelToggle{width:32px;height:32px;font-size:18px}
+
+/* small screens: the panel becomes a bottom sheet (starts collapsed via JS) */
+@media (max-width: 640px){
+  #panel{top:auto;bottom:0;left:0;right:0;width:auto;max-height:58%;
+    border-radius:12px 12px 0 0;border-left:none;border-right:none;border-bottom:none;
+    padding:10px 16px 14px}
+}

@@ -64,24 +64,59 @@ export interface CameraHooks {
   onDive(clientX: number, clientY: number): void;
 }
 
-/** Orbit / zoom / pan / pinch / dive interactions. */
+interface Tracked { x: number; y: number; sx: number; sy: number; moved: boolean }
+
+/** Orbit / zoom / pan / pinch / dive interactions (mouse and touch). */
 export function attachCameraControls(
   canvas: HTMLCanvasElement, field: FieldStore, hooks: CameraHooks,
 ): void {
-  const pointers = new Map<number, { x: number; y: number }>();
+  const pointers = new Map<number, Tracked>();
   let panMode = false;
+  let lastTap = { t: 0, x: 0, y: 0 };
+  let lastDive = 0;
+
+  function requestDive(x: number, y: number): void {
+    const now = performance.now();
+    if (now - lastDive < 500) return;      // dblclick + double-tap dedupe
+    lastDive = now;
+    hooks.onDive(x, y);
+  }
+
+  function pan(dx: number, dy: number): void {
+    const v = camVectors(field);
+    const k = cam.dist * 0.0011;
+    const ff: [number, number] = [v.fwd[0], v.fwd[1]];
+    const fl = Math.hypot(ff[0], ff[1]) || 1;
+    ff[0] /= fl; ff[1] /= fl;
+    cam.tx += -v.right[0] * dx * k + ff[0] * dy * k;
+    cam.ty += -v.right[1] * dx * k + ff[1] * dy * k;
+    cam.tx = clamp(cam.tx, WORLD_MIN, WORLD_MAX);
+    cam.ty = clamp(cam.ty, WORLD_MIN, WORLD_MAX);
+  }
 
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   canvas.addEventListener('pointerdown', (e) => {
     try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false });
+    if (pointers.size > 1) pointers.forEach((p) => { p.moved = true; });  // multi-touch is never a tap
     panMode = e.button === 2 || e.shiftKey;
     canvas.classList.add('dragging');
   });
   canvas.addEventListener('pointerup', (e) => {
+    const p = pointers.get(e.pointerId);
     pointers.delete(e.pointerId);
     if (pointers.size === 0) canvas.classList.remove('dragging');
+    // double-tap on touch = dive (dblclick is unreliable with touch-action:none)
+    if (e.pointerType === 'touch' && p && !p.moved) {
+      const now = performance.now();
+      if (now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 25) {
+        lastTap.t = 0;
+        requestDive(e.clientX, e.clientY);
+      } else {
+        lastTap = { t: now, x: e.clientX, y: e.clientY };
+      }
+    }
   });
   canvas.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); });
 
@@ -89,32 +124,26 @@ export function attachCameraControls(
     const prev = pointers.get(e.pointerId);
     if (!prev) return;
     const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    const moved = prev.moved || Math.hypot(e.clientX - prev.sx, e.clientY - prev.sy) > 10;
 
-    if (pointers.size === 2) {                       // pinch zoom
+    if (pointers.size === 2) {                       // pinch zoom + two-finger pan
       const ids = [...pointers.keys()];
       const other = pointers.get(ids[0] === e.pointerId ? ids[1] : ids[0]);
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: prev.sx, sy: prev.sy, moved: true });
       if (!other) return;
       const d0 = Math.hypot(prev.x - other.x, prev.y - other.y);
       const d1 = Math.hypot(e.clientX - other.x, e.clientY - other.y);
-      if (d0 > 0 && d1 > 0) {
-        cam.dist = clamp((cam.dist * d0) / d1, 0.35, 9);
-        hooks.markDirty();
-      }
+      if (d0 > 0 && d1 > 0) cam.dist = clamp((cam.dist * d0) / d1, 0.35, 9);
+      const midDx = (e.clientX - prev.x) / 2;        // midpoint delta = pan
+      const midDy = (e.clientY - prev.y) / 2;
+      pan(midDx, midDy);
+      hooks.markDirty();
       return;
     }
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: prev.sx, sy: prev.sy, moved });
 
     if (panMode) {
-      const v = camVectors(field);
-      const k = cam.dist * 0.0011;
-      const ff: [number, number] = [v.fwd[0], v.fwd[1]];
-      const fl = Math.hypot(ff[0], ff[1]) || 1;
-      ff[0] /= fl; ff[1] /= fl;
-      cam.tx += -v.right[0] * dx * k + ff[0] * dy * k;
-      cam.ty += -v.right[1] * dx * k + ff[1] * dy * k;
-      cam.tx = clamp(cam.tx, WORLD_MIN, WORLD_MAX);
-      cam.ty = clamp(cam.ty, WORLD_MIN, WORLD_MAX);
+      pan(dx, dy);
     } else {
       cam.yaw -= dx * 0.005;
       cam.pitch = clamp(cam.pitch + dy * 0.005, 0.05, 1.45);
@@ -128,5 +157,5 @@ export function attachCameraControls(
     hooks.markDirty();
   }, { passive: false });
 
-  canvas.addEventListener('dblclick', (e) => hooks.onDive(e.clientX, e.clientY));
+  canvas.addEventListener('dblclick', (e) => requestDive(e.clientX, e.clientY));
 }
